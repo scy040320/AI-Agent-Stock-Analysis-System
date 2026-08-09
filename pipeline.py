@@ -72,7 +72,7 @@ def investment_manager_node(state: MessagesState, llm) -> Dict[str, Any]:
     response = llm.invoke([sys_msg, user_msg])
     return {"messages": [response]}
 
-# 6. 动态编译带有条件路由和 HITL 中断的图
+# 6. 动态编译带有条件路由和 HITL 中断的图（纯内存态，完美避开云端 cffi/sqlite 编译错误）
 def get_user_app(api_key: str):
     llm = ChatOpenAI(
         model="deepseek-chat",
@@ -109,12 +109,7 @@ def get_user_app(api_key: str):
     # 宏观支路
     workflow.add_edge("Macro_Analyst", END)
     
-    import sqlite3
-    conn = sqlite3.connect("agent_memory.db", check_same_thread=False)
-    memory = SqliteSaver(conn)
-    
-    # 仅对个股支路的投资经理前设置拦截（HITL）
+    # 直接编译返回（不使用 SqliteSaver，100% 兼容所有云端环境）
     return workflow.compile(
-        checkpointer=memory,
         interrupt_before=["Investment_Manager"]
     )
